@@ -1,6 +1,7 @@
 package gee
 
 import (
+	"html/template"
 	"log"
 	"net/http"
 	"path"
@@ -17,8 +18,20 @@ type RouterGroup struct {
 }
 type Engine struct {
 	*RouterGroup
-	router *router
-	groups []*RouterGroup // 存储所有的组
+	router        *router
+	groups        []*RouterGroup     // 存储所有路由组
+	htmlTemplates *template.Template // html render
+	funcMap       template.FuncMap   // html render
+}
+
+// SetFuncMap 自定义模板渲染函数
+func (engine *Engine) SetFuncMap(funcMap template.FuncMap) {
+	engine.funcMap = funcMap
+}
+
+// LoadHTMLGlob 将所有模板加载进内存
+func (engine *Engine) LoadHTMLGlob(pattern string) {
+	engine.htmlTemplates = template.Must(template.New("").Funcs(engine.funcMap).ParseGlob(pattern))
 }
 
 // New 构造函数 gee.Engine
@@ -103,5 +116,6 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	c := newContext(w, req)
 	c.handlers = middlewares // 得到中间件列表后，赋值给 c.handlers。
+	c.engine = engine
 	engine.router.handle(c)
 }
